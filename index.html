@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Locks the page down: only our own script/style, no network calls at all, no inline code, Trusted Types enforced. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'; require-trusted-types-for 'script'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>CardCheck · Card number validator</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+  <main class="page">
+    <header class="head rise">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6l7-3z"/><path d="M8.8 12.2l2.4 2.4 4-4.4"/></svg>
+      </div>
+      <div class="head-text">
+        <h1>CardCheck</h1>
+        <p>Type a card number and watch it identify the network and run the Luhn checksum live.</p>
+      </div>
+      <span class="pill">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/></svg>
+        Runs locally · nothing leaves your browser
+      </span>
+    </header>
+
+    <div class="shell" id="shell" data-state="idle">
+      <!-- LEFT: live card + Luhn walkthrough -->
+      <section class="left">
+        <div class="stage rise d1">
+          <div class="shaker" id="shaker">
+            <div class="tilt" id="tilt">
+              <div class="card" id="card" data-brand="unknown">
+                <div class="face front">
+                  <span class="ripple" id="ripple"></span>
+                  <div class="badge" id="badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"/><path class="cross" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+                  </div>
+                  <div class="row top">
+                    <span class="chip"></span>
+                    <span class="brandmark" id="brandMark"></span>
+                  </div>
+                  <div class="number" id="slots" aria-hidden="true"></div>
+                  <div class="row bottom">
+                    <div><small>Cardholder</small><span id="cardName">FULL NAME</span></div>
+                    <div class="r"><small>Expires</small><span id="cardExp">MM/YY</span></div>
+                  </div>
+                </div>
+                <div class="face back" aria-hidden="true">
+                  <div class="strip"></div>
+                  <div class="sig"><span class="sigbox"></span><span class="cvvbox" id="cardCvv">•••</span></div>
+                  <small class="note">Security code</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="stage-tools rise d1">
+          <button type="button" class="ghost" id="btnHide" aria-pressed="false">Hide digits</button>
+        </div>
+
+        <section class="luhn rise d2" aria-labelledby="luhnTitle">
+          <div class="luhn-head">
+            <h2 id="luhnTitle">Luhn walkthrough</h2>
+            <span class="legend"><i class="sw"></i> doubled from the right</span>
+          </div>
+          <div class="chips" id="luhnChips" aria-hidden="true"></div>
+          <p class="luhn-sum" id="luhnSum" data-ok=""></p>
+        </section>
+      </section>
+
+      <!-- RIGHT: form -->
+      <section class="panel rise d2">
+        <form id="form" autocomplete="off" novalidate>
+          <div class="field" id="fNumber">
+            <div class="label-row">
+              <label for="number">Card number</label>
+              <span class="net" id="netTag"></span>
+            </div>
+            <div class="control">
+              <input id="number" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off"
+                     spellcheck="false" maxlength="23" placeholder="1234 5678 9012 3456" data-1p-ignore data-lpignore="true">
+              <svg class="status" viewBox="0 0 24 24" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"/><path class="cross" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+            </div>
+            <div class="meter" id="meter"><i></i></div>
+            <p class="verdict" id="verdict" role="status" aria-live="polite"><span class="dot"></span><span id="verdictText">Enter a card number to begin</span></p>
+          </div>
+
+          <div class="field" id="fName">
+            <div class="label-row"><label for="name">Name on card <em>(optional)</em></label></div>
+            <div class="control">
+              <input id="name" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                     maxlength="26" placeholder="Ama Mensah" data-1p-ignore data-lpignore="true">
+            </div>
+          </div>
+
+          <div class="two">
+            <div class="field" id="fExp">
+              <div class="label-row"><label for="exp">Expiry</label></div>
+              <div class="control">
+                <input id="exp" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="5" placeholder="MM/YY" data-1p-ignore data-lpignore="true">
+                <svg class="status" viewBox="0 0 24 24" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"/><path class="cross" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+              </div>
+            </div>
+            <div class="field" id="fCvv">
+              <div class="label-row"><label for="cvv">Security code</label></div>
+              <div class="control">
+                <input id="cvv" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="4" placeholder="•••" data-1p-ignore data-lpignore="true">
+                <svg class="status" viewBox="0 0 24 24" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"/><path class="cross" d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="primary" id="btnVerify"><span>Verify card</span></button>
+            <button type="button" class="ghost" id="btnClear">Clear</button>
+          </div>
+
+          <div class="samples" id="samples">
+            <span class="hint">Try a public test number</span>
+            <div class="sample-row">
+              <button type="button" data-n="4111111111111111">Visa</button>
+              <button type="button" data-n="5555555555554444">Mastercard</button>
+              <button type="button" data-n="2223003122003222">Mastercard (2-series)</button>
+              <button type="button" data-n="378282246310005">Amex</button>
+              <button type="button" data-n="6011111111111117">Discover</button>
+              <button type="button" data-n="30569309025904">Diners</button>
+              <button type="button" data-n="3530111333300000">JCB</button>
+              <button type="button" data-n="4111111111111112" class="bad">Bad checksum</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="results" id="results" aria-live="polite">
+          <div class="results-inner">
+            <h3 id="resultTitle"></h3>
+            <p class="sub" id="resultSub"></p>
+            <ul class="checks" id="resultList"></ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <p>Luhn only proves the digits are internally consistent. It can’t tell you a card is real, active or funded. Please use the test numbers above, not a real card.</p>
+      <p>Nothing is stored or transmitted. Fields clear when you leave the page or after 2 minutes idle.</p>
+      <p>&copy; Emmanuel Odoom. 2026 Card Verification. All rights reserved.</p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
